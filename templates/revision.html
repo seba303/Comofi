@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Revisión {{ revision.id }}{% endblock %}
+{% block content %}
+<h2>Revisión #{{ revision.id }}</h2>
+<div class="card">
+  <p>
+    <strong>{{ revision.bank_file }}</strong> contra <strong>{{ revision.internal_file }}</strong><br>
+    <span class="muted">Ejecutada el {{ revision.timestamp.replace('T', ' ') }}</span>
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Categoría</th><th class="num">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, value in revision.summary.items() %}
+      <tr><td>{{ key }}</td><td class="num">{{ value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p><a class="btn" href="{{ url_for('download_revision', revision_id=revision.id) }}">Descargar CSV emparejado</a></p>
+</div>
+
+<h2>Parejas emparejadas</h2>
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Ref. banco</th><th>Ref. interno</th><th>Estado</th>
+        <th class="num">Dif. importe</th><th class="num">Dif. días</th><th class="num">Puntuación</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pair in revision.detail.matched %}
+      <tr>
+        <td>{{ pair.bank_ref }}</td>
+        <td>{{ pair.internal_ref }}</td>
+        <td>
+          {% if pair.status == 'coincidente' or pair.status == 'coincidente_aproximada' %}
+            <span class="badge">{{ pair.status }}</span>
+          {% else %}
+            <span class="badge alerta">{{ pair.status }}</span>
+          {% endif %}
+        </td>
+        <td class="num">{{ pair.amount_diff | eur }}</td>
+        <td class="num">{{ pair.days_diff }}</td>
+        <td class="num">{{ pair.score }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">
+    El detalle completo (duplicados y pendientes) se exporta en los CSV de
+    <code>data/resultados/</code> generados al ejecutar la conciliación.
+  </p>
+</div>
+{% endblock %}
