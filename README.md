@@ -1,34 +1,61 @@
-# Comofi — Conciliación de movimientos financieros
+# Comofi
 
-Aplicación que importa dos archivos CSV (por ejemplo, **movimientos bancarios** y **registros internos**) y detecta automáticamente:
+Comofi es una herramienta para la conciliación automática de movimientos financieros entre dos fuentes de datos, normalmente:
 
-- **Operaciones coincidentes** entre ambos orígenes.
-- **Diferencias de importe o de fecha** entre pares emparejados.
-- **Movimientos duplicados** dentro de cada origen.
-- **Transacciones pendientes de conciliación** (sin contrapartida).
-- **Historial de revisiones** guardado en SQLite y **exportación de resultados** a CSV.
+- extracto bancario
+- registro interno o contable
 
-Pensada para bancos, operaciones, back office, análisis de datos y desarrollo de sistemas financieros. Usa únicamente **datos ficticios**: no necesita acceso a información bancaria real ni a sistemas de un banco.
+La aplicación compara ambos conjuntos, detecta coincidencias, discrepancias, duplicados y movimientos pendientes, y guarda un historial de cada revisión para su análisis posterior.
 
-Programa creado por Sebastián Romero.
+## ¿Qué resuelve?
 
----
+Cuando un equipo financiero o operativo compara dos CSV manualmente, el proceso suele ser lento, repetitivo y propenso a errores. Comofi automatiza esa tarea y ayuda a identificar rápidamente:
 
-## Capturas de pantalla
+- operaciones coincidentes
+- diferencias de importe
+- diferencias de fecha
+- movimientos duplicados
+- pendientes por conciliar
 
-### Portada: importación de CSV e historial de revisiones
+## Valor del proyecto
 
-![Portada de Comofi](docs/screenshots/01-portada.png)
+Este proyecto combina tres elementos importantes:
 
-### Detalle de una revisión: coincidencias, discrepancias, duplicados y pendientes
+- automatización real de procesos de control financiero
+- uso de Python y análisis de datos con pandas
+- interfaz web simple y útil para demostrar la funcionalidad en una presentación
 
-![Detalle de revisión](docs/screenshots/02-revision-detalle.png)
+Es un buen ejemplo de una aplicación práctica con impacto directo en operaciones bancarias o contables.
 
-### Portada tras ejecutar una conciliación (aviso de resultado e historial actualizado)
+## Funcionalidades principales
 
-![Portada tras conciliar](docs/screenshots/03-portada-post-conciliacion.png)
+- carga y validación de CSV con cabeceras esperadas
+- normalización de fechas y importes
+- emparejamiento exacto por referencia
+- emparejamiento aproximado por importe y concepto
+- detección de duplicados por origen
+- listado de pendientes de conciliación
+- historial persistente en SQLite
+- exportación de resultados a CSV
+- interfaz web para uso local
 
-### Salida por línea de órdenes
+## Flujo de trabajo
+
+```text
+CSV bancario + CSV interno
+          ↓
+      validación
+          ↓
+  normalización de datos
+          ↓
+   emparejamiento / clasificación
+          ↓
+       historial + exportación
+          ↓
+    resumen visual y CSV resultante
+```
+
+## Demo de salida
 
 ```text
 === Resumen de conciliación ===
@@ -37,136 +64,202 @@ discrepancias             2
 duplicados                4
 pendientes_banco          2
 pendientes_interno        1
-
---- Discrepancias ---
-[diferencia_importe] banco TRX-1003 (2026-03-03 / -1200.00) vs interno OP-1003 (2026-03-03 / -1200.50) | dif importe +0.50 | dif días 0
-[diferencia_fecha] banco TRX-1007 (2026-03-06 / 980.00) vs interno OP-1007 (2026-03-08 / 980.00) | dif importe +0.00 | dif días 2
-
---- Duplicados ---
-[banco] x2 -> 2026-03-11 | -300.00 EUR | Reintegro efectivo caja fuerte
-[interno] x2 -> 2026-03-11 | -300.00 EUR | Reintegro caja chica
-
---- Pendientes de conciliación ---
-Banco sin contrapartida interna (2):
-  2026-03-05 TRX-1005 Comision mantenimiento cuenta -15.00
-  2026-03-12 TRX-1013 Comision transferencia internacional 8.50
-Interno sin contrapartida bancaria (1):
-  2026-03-14 OP-1015 Anticipo cliente Zeta SL 3000.00
 ```
-
----
 
 ## Estructura del proyecto
 
 ```text
 comofi/
-  config.py        # Constantes y parámetros ajustables (tolerancias, pesos, rutas)
-  csv_loader.py    # Lectura y validación de CSV (fechas es/EU, importes "1.234,56")
-  reconciler.py    # Motor de conciliación (emparejamiento exacto y aproximado)
-  history.py       # Historial de revisiones en SQLite
-  exporter.py      # Exportación a CSV consolidado y por categoría
-  samples.py       # Generador de CSV ficticios de ejemplo
-  web.py           # Interfaz web (Flask)
-templates/         # Plantillas HTML de la interfaz (estilo corporativo/earthy)
-data/sample_files/ # CSV de ejemplo generados
-main.py            # Punto de entrada por línea de órdenes
+  __init__.py
+  config.py
+  csv_loader.py
+  reconciler.py
+  history.py
+  exporter.py
+  samples.py
+  web.py
+
+templates/
+  base.html
+  index.html
+  revision.html
+
+data/
+  sample_files/
+  resultados/
+  comofi.db
+
+main.py
+requirements.txt
+README.md
+Dockerfile
 ```
 
 ## Requisitos
 
-- Python 3.10 o superior.
-- `pandas` y `Flask` (ver `requirements.txt`).
+- Python 3.10+
+- pip
+- acceso local para ejecutar la app web
 
 ## Instalación
 
 ```bash
-git clone <url-del-repositorio> comofi
-cd comofi
+git clone https://github.com/seba303/Comofi.git
+cd Comofi
 python -m venv .venv
-source .venv/bin/activate        # En Windows: .venv\Scripts\activate
+source .venv/bin/activate   # En Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Uso
+## Uso rápido
 
-### 1. Generar los CSV ficticios de ejemplo
+### 1. Generar datos de ejemplo
 
 ```bash
 python main.py generar-ejemplos
 ```
 
-Crea `data/sample_files/movimientos_bancarios.csv` y `data/sample_files/registros_internos.csv` con casos sembrados a propósito: coincidencias limpias, una diferencia de importe, una diferencia de fecha, duplicados gemelos y movimientos sin contrapartida.
-
-### 2. Conciliar por línea de órdenes
+### 2. Conciliar dos CSV
 
 ```bash
 python main.py conciliar data/sample_files/movimientos_bancarios.csv data/sample_files/registros_internos.csv
 ```
 
-Muestra el resumen en consola, guarda la revisión en el historial y exporta los resultados a `data/resultados/`.
-
-### 3. Consultar el historial de revisiones
+### 3. Ver historial
 
 ```bash
 python main.py historial
 ```
 
-### 4. Interfaz web
+### 4. Iniciar interfaz web
 
 ```bash
-python main.py web        # http://127.0.0.1:5000
+python main.py web
 ```
 
-- Sube los dos CSV y pulsa **Conciliar**.
-- Consulta el detalle de cada revisión: coincidencias, discrepancias, duplicados y pendientes.
-- Descarga el CSV de cualquier revisión desde su página de detalle.
-- Endpoint de comprobación: `GET /salud`.
+La app queda disponible en:
+
+```text
+http://127.0.0.1:5000
+```
 
 ## Formato esperado de los CSV
 
-**Movimientos bancarios** (cabeceras obligatorias):
+### Banco
 
 ```csv
 fecha,referencia,concepto,importe
 03/03/2026,TRX-1003,Alquiler oficina marzo,-1200,00
 ```
 
-**Registros internos** (cabeceras obligatorias):
+### Registro interno
 
 ```csv
 fecha,id_operacion,detalle,importe
 03/03/2026,OP-1003,Alquiler oficina,-1200,50
 ```
 
-Notas de lectura:
+Se aceptan fechas en formatos como:
 
-- Fechas aceptadas: `dd/mm/yyyy`, `yyyy-mm-dd` o `dd-mm-yyyy`.
-- Importes en formato europeo (`1.234,56`) o estándar (`1234.56`).
-- Las cabeceras se validan al importar; si falta alguna, la app informa del error concreto.
+- dd/mm/yyyy
+- yyyy-mm-dd
+- dd-mm-yyyy
 
-## Cómo decide la aplicación cada categoría
+Y importes en formatos europeos o estándar, por ejemplo:
 
-| Categoría | Criterio |
-|---|---|
-| Coincidente | Referencia idéntica, o similitud de importe y concepto por encima del umbral configurado, con fechas dentro de la ventana máxima. |
-| Diferencia de importe | Par emparejado cuya diferencia absoluta supera la tolerancia de céntimos. |
-| Diferencia de fecha | Par emparejado cuyas fechas difieren más de lo permitido por la tolerancia diaria. |
-| Duplicado | Dos o más filas con la misma fecha, importe y concepto dentro del mismo origen. |
-| Pendiente | Movimiento que no encuentra contrapartida en el otro origen tras las dos pasadas de emparejamiento. |
+- 1.234,56
+- 1234.56
 
-Todos los umbrales viven en `comofi/config.py` (por ejemplo, `AMOUNT_TOLERANCE`, `DAYS_WINDOW`, `FUZZY_MIN_SCORE`, `WEIGHT_AMOUNT`, `WEIGHT_CONCEPT`). No hay valores quemados en la lógica.
+## Cómo funciona la conciliación
 
-## Exportación de resultados
+El motor de reglas realiza dos pasos:
 
-Cada conciliación genera en `data/resultados/`:
+1. Emparejamiento exacto por referencia
+2. Emparejamiento aproximado por importe y concepto dentro de una ventana de fechas
 
-- `conciliacion_<marca_temporal>.csv` — consolidado con todas las categorías.
-- `..._coincidentes.csv`, `..._discrepancias.csv`, `..._duplicados.csv`, `..._pendientes_banco.csv`, `..._pendientes_interno.csv` — un archivo por categoría.
+Después clasifica cada caso en:
 
-## Historial de revisiones
+- coincidentes
+- discrepancias
+- duplicados
+- pendientes
 
-Cada ejecución (CLI o web) queda registrada en SQLite (`data/comofi.db`) con fecha, nombres de los archivos importados y recuento por categoría. Se conservan como máximo `MAX_REVISIONS_KEPT` revisiones (recorte automático).
+Todos los umbrales están centralizados en `comofi/config.py` para facilitar ajustes.
 
-## Licencia y autoría
+## Historial y exportación
 
-Programa creado por **Sebastián Romero**. Consulte el archivo [LICENSE](LICENSE) del repositorio para los términos de propiedad intelectual.
+Cada ejecución guarda su resultado en SQLite. Además, los resultados se exportan como CSV en la carpeta:
+
+```text
+data/resultados/
+```
+
+Se generan:
+
+- consolidado completo
+- CSV por categoría
+
+## Arquitectura técnica
+
+```text
++------------------+      +-------------------+
+| CSV bancario     |      | CSV interno       |
++--------+---------+      +---------+---------+
+         |                            |
+         v                            v
+   csv_loader.py             csv_loader.py
+         |                            |
+         +-----------+----------------+
+                     v
+             reconciler.py
+                     |
+                     v
+             result classification
+                     |
+          +----------+-----------+
+          |                      |
+          v                      v
+    history.py            exporter.py
+          |                      |
+          +-----------+----------+
+                      v
+               SQLite + CSV export
+```
+
+## Mejoras recomendadas para una presentación
+
+Este proyecto ya tiene una base sólida, pero para una demo profesional se recomienda:
+
+- mejorar la UI de la web con dashboard y métricas
+- añadir tests para validación de lógica
+- documentar mejor el flujo de negocio
+- preparar despliegue con Docker
+- mejorar mensajes de error y UX
+
+## Ejecutar con Docker
+
+```bash
+docker build -t comofi .
+docker run -p 5000:5000 comofi
+```
+
+## Licencia
+
+Consulta el archivo `LICENSE` del repositorio para más información.
+
+## Autor
+
+Sebastián Romero
+
+## Estado del proyecto
+
+Proyecto funcional, orientado a la conciliación financiera y listo para ser presentado como demostración de automatización de procesos y análisis de datos.
+
+---
+
+Si quieres, puedes usar este repositorio como base para una presentación técnica de:
+
+- automatización de procesos operativos
+- control financiero
+- análisis de discrepancias
+- generación de reportes y trazabilidad

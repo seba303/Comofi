@@ -1,0 +1,25 @@
+# Keep project data and generated outputs out of the Docker image
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.git/
+.gitignore
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor files
+.vscode/
+.idea/
+.DS_Store
+
+# Local runtime artifacts
+/data/comofi.db
+/data/resultados/
+/data/sample_files/

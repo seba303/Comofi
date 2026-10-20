@@ -1,57 +1,246 @@
-{% extends "base.html" %}
-{% block content %}
-<h2>Importar movimientos</h2>
-<div class="card">
-  <form action="{{ url_for('conciliate') }}" method="post" enctype="multipart/form-data">
-    <div class="grid-2">
-      <div>
-        <label for="banco">Extracto bancario (CSV)</label>
-        <input type="file" id="banco" name="banco" accept=".csv" required>
-        <p class="muted">Columnas: fecha, referencia, concepto, importe</p>
-      </div>
-      <div>
-        <label for="interno">Registro interno (CSV)</label>
-        <input type="file" id="interno" name="interno" accept=".csv" required>
-        <p class="muted">Columnas: fecha, id_operacion, detalle, importe</p>
-      </div>
-    </div>
-    <p><button type="submit">Conciliar</button></p>
-  </form>
-  <p class="muted">
-    ¿Sin ficheros a mano? Ejecuta <code>python main.py generar-ejemplos</code> y usa los CSV de
-    <code>{{ samples[0] }}</code> y <code>{{ samples[1] }}</code>.
-  </p>
-</div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Comofi{% endblock %} · Conciliación financiera</title>
+  <style>
+    :root {
+      --navy: #16324f;
+      --teal: #2d6a73;
+      --gold: #d9a441;
+      --sand: #f4efe7;
+      --paper: #fffdf9;
+      --ink: #1f2a37;
+      --muted: #667085;
+      --line: #dfe3e8;
+      --success: #1f8a70;
+      --warning: #c97a2b;
+      --danger: #b94a48;
+    }
 
-<h2>Historial de revisiones</h2>
-<div class="card">
-  {% if revisions %}
-  <table>
-    <thead>
-      <tr>
-        <th>#</th><th>Fecha y hora</th><th>Extracto</th><th>Interno</th>
-        <th class="num">Coincidentes</th><th class="num">Discrepancias</th>
-        <th class="num">Duplicados</th><th class="num">Pendientes</th><th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for rev in revisions %}
-      <tr>
-        <td>{{ rev.id }}</td>
-        <td>{{ rev.timestamp.replace('T', ' ') }}</td>
-        <td>{{ rev.bank_file }}</td>
-        <td>{{ rev.internal_file }}</td>
-        <td class="num">{{ rev.summary.coincidentes }}</td>
-        <td class="num">{{ rev.summary.discrepancias }}</td>
-        <td class="num">{{ rev.summary.duplicados }}</td>
-        <td class="num">{{ rev.summary.pendientes_banco + rev.summary.pendientes_interno }}</td>
-        <td><a class="btn" href="{{ url_for('revision_view', revision_id=rev.id) }}">Ver</a></td>
-      </tr>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, #edf4f6 0%, #f7f5f0 100%);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--navy), var(--teal));
+      color: white;
+      padding: 1.2rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.45rem;
+      letter-spacing: 0.03em;
+    }
+
+    header a {
+      color: white;
+      text-decoration: none;
+    }
+
+    header span {
+      opacity: 0.9;
+      font-size: 0.95rem;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    h2 {
+      color: var(--navy);
+      border-bottom: 2px solid rgba(22, 50, 79, 0.15);
+      padding-bottom: 0.45rem;
+      margin: 1.8rem 0 1rem;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1.3rem 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(17, 24, 39, 0.04);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 1.2rem 0 1.6rem;
+    }
+
+    .stat {
+      background: linear-gradient(180deg, #ffffff 0%, #f7fafb 100%);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-top: 0.35rem;
+      line-height: 1.1;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 0.45rem;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    button, .btn {
+      background: linear-gradient(135deg, var(--gold), #b97f22);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.3rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: transform 0.15s ease-in-out;
+    }
+
+    button:hover, .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.92rem;
+    }
+
+    th {
+      background: var(--navy);
+      color: white;
+      text-align: left;
+      padding: 0.7rem;
+    }
+
+    td {
+      padding: 0.6rem 0.7rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td {
+      background: rgba(45, 106, 115, 0.03);
+    }
+
+    .flash {
+      border-left: 5px solid var(--teal);
+      background: rgba(45, 106, 115, 0.08);
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      color: var(--ink);
+    }
+
+    .flash.error {
+      border-left-color: var(--danger);
+      background: rgba(185, 74, 72, 0.08);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.18rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      background: var(--success);
+      color: white;
+    }
+
+    .badge.alerta {
+      background: var(--warning);
+    }
+
+    .num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    code {
+      background: #f1f3f5;
+      border-radius: 4px;
+      padding: 0.1rem 0.35rem;
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 1.2rem 1rem 2rem;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 760px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+      main { padding-top: 1rem; }
+      th, td { font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="{{ url_for('index') }}">Comofi</a></h1>
+    <span>Conciliación de movimientos financieros</span>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
       {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">Aún no hay revisiones. Concilia dos CSV para empezar.</p>
-  {% endif %}
-</div>
-{% endblock %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>Programa creado por Sebastián Romero</footer>
+</body>
+</html>

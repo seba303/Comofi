@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+.DS_Store
+.idea/
+.vscode/
+*.log
+.env
+.env.*
+.cursor/
+
+# Project data
+/data/resultados/
+/data/comofi.db
+/data/sample_files/*
+
+# Keep sample source examples if needed
+!data/sample_files/.gitkeep
